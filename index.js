@@ -3,7 +3,7 @@ const XLSX = require('xlsx-js-style')
 const userInfo = [
     ["Nombre Cliente","DANIELA ALEJANDRA CANDIA ZAMORANO"],
     ["Rut Cliente","160987933"],
-    ["Fecha","28/11/2022 3:36"],
+    ["Fecha"," 28 / 11 / 2022 3:36"],
     ["Operación", "Nombre transación" ],
 ]
 
@@ -31,23 +31,37 @@ new Array(3).fill(
         "Nombre fondo": 'Fondo A',
         "N° Solicitud": '21341234',
         "Canal de ingreso": 'Canal WEB',
-        "Fecha Ingreso": new Date(),
+        "Fecha Ingreso": new Date().toLocaleDateString(),
         "Estado Actual": 'aprobado',
-        "Fecha Cierre": '15/12/2022',
+        "Fecha Cierre":  new Date().toLocaleDateString(),
     }
 )
 
-const hideGridLines = (workSheet) => {
+const hideGridLines = () => {
+    let columnsDummy = new Array(30).fill('dummyData')
+    columnsDummy = columnsDummy.map((value, index)=> `${index}${value}`)
+    let rowsDummys = []
+    rowsDummys.push(columnsDummy)
+    for (let index = 0; index < 5000; index++) {
+        rowsDummys.push(columnsDummy)
+    }
+    
+    let workSheet= XLSX.utils.aoa_to_sheet(rowsDummys, {origin: 3})
     for (const property in workSheet) {
         workSheet[property].s = { 
             fill: { fgColor: { rgb: "FFFFFF" } },
             border: { style: 'thin', color: "FFFFFF" }
         }
     }
+    console.log(workSheet)
+    for (const property in workSheet) {
+        workSheet[property].v = ''
+    }
+    return workSheet;
 }
 
 const setAddresA1B1TypeToHeadersObject = (cabecera) => {
-    // console.log(`setAddresA1B1TypeToHeadersObject`,cabecera)
+    // // console.log(`setAddresA1B1TypeToHeadersObject`,cabecera)
     cabecera.forEach( (element, index) => {
         element.a1b1 = index
     });
@@ -80,10 +94,10 @@ const getDtoMetaData = (dto) => {
                     initRowAddres: address,
                     initRowNumber,
                     endRowNumber: initRowNumber + dto.length,
-                    endRowAddress() { return `${this.addressLastColumn.replace(/[^a-zA-Z]+/g, '')}${this.endRowNumber}` }, 
+                    endRowAddress() { return `${this.addresLastHeaderColumn.replace(/[^a-zA-Z]+/g, '')}${this.endRowNumber}` }, 
                     lastColumnValue: this.lastColumnValue(),
                     lengthRow: this.lengthRow,
-                    addressLastColumn: Object.entries(range).find(([key, value]) => value.v == this.lastColumnValue())[0]
+                    addresLastHeaderColumn: Object.entries(range).find(([key, value]) => value.v == this.lastColumnValue())[0]
                 } 
                 return response
             }
@@ -96,45 +110,81 @@ const getDtoMetaData = (dto) => {
     return DTOMetaData;
 }
 
+
+const borderStyle = {
+    top: { style: 'medium', color: { rgb: "DDDDDD" } }, 
+    bottom: { style: 'medium', color: { rgb: "DDDDDD" } },
+    left: { style: 'medium', color: { rgb: "DDDDDD" } },
+    right: { style: 'medium', color: { rgb: "DDDDDD" } }
+}
+const headersStyles = { font: { name: "Trebuchet MS", sz: 11, color: {rgb: 'FFFFFF'} } , fill: { fgColor: { rgb: "1788D7" } },
+border: borderStyle }
+const tableStyles = { 
+    font: { name: "Trebuchet MS", sz: 11 }, 
+    fill: { fgColor: { rgb: "FFFFFF" } },
+    border: borderStyle
+}
+
 const convertJsonToExcel = () => {
+    // const worksheet2 = hideGridLines()
     const workSheet = XLSX.utils.aoa_to_sheet(userInfo, {origin: 3})
     setAddresA1B1TypeToHeadersObject(cabeceras)
-    const workSheet2 = XLSX.utils.json_to_sheet(dto);
+    // const workSheet2 = XLSX.utils.json_to_sheet(dto);
     const workBook = XLSX.utils.book_new();
     for (const property in workSheet) {
-        //// console.log('Primera pasada', workSheet[property] )
+        //// // console.log('Primera pasada', workSheet[property] )
         workSheet[property].s = { 
             font: { name: "Trebuchet MS", sz: 11 }, 
             fill: { fgColor: { rgb: "FFFFFF" } },
             border: { style: 'thin', color: "FFFFFF" }
         }
         if(property.includes('1') && property.length == 2){          
-            workSheet[property].s = { font: { name: "Trebuchet MS", sz: 11, color: {rgb: 'FFFFFF'} } , fill: { fgColor: { rgb: "1788D7" } } }
+            workSheet[property].s = headersStyles
         }
     }
     XLSX.utils.sheet_add_aoa(workSheet, convertJsonData(dto), { origin: -1 });
-    let count = 0
     let metaData = {}
+    let insideTable = false;
+    let insideHeaders = false
     for (const property in workSheet) {
-        count++;
-        if(getDtoMetaData(dto).getInitTableA1B1(property, workSheet)){
-            //console.log(`Addres primer valor tabla: (${property})`, getDtoMetaData(dto).getInitTableA1B1(property, workSheet))
-            //console.log(getDtoMetaData(dto).getInitTableA1B1(property, workSheet).endRowAddress())
+        if(getDtoMetaData(dto).getInitTableA1B1(property, workSheet)) {
             metaData = {... getDtoMetaData(dto).getInitTableA1B1(property, workSheet) }
         }
-        // console.log(`Segunda ${count}`, {hoja: workSheet[property], property} )
+        if(insideTable){
+            workSheet[property].s = tableStyles
+           
+            if(workSheet[property].t=='n'){
+                workSheet[property].t = 'n'
+                // // console.log(workSheet[property])
+            }
+            if(workSheet[property].z){
+                workSheet[property].t = 'd'
+                // console.log(workSheet[property])
+            }
+        }
+        if(insideHeaders || getDtoMetaData(dto).getInitTableA1B1(property, workSheet)){
+            // Apply headers styles
+            workSheet[property].s = headersStyles
+            insideHeaders = true
+        }
+        if(metaData.addresLastHeaderColumn == property){
+            insideHeaders = false
+            insideTable = true
+            workSheet[property].s = headersStyles
+        }
+        // // console.log(`Segunda ${count}`, {hoja: workSheet[property], property} )
     }
 
 
-    console.log(`Metadata: `, metaData)
+    // console.log(`Metadata: `, {metaData, workSheet, cols: workSheet['!cols']})
     
-    XLSX.utils.book_append_sheet(workBook, workSheet, "students")
+    XLSX.utils.book_append_sheet(workBook, workSheet, "Transacciones APV Fondos Mutuos")
     // Generate buffer
     XLSX.write(workBook, { bookType: 'xlsx', type: "buffer" })
     // Binary string
     XLSX.write(workBook, { bookType: "xlsx", type: "binary" })
 
-    XLSX.writeFile(workBook, "studentsData.xlsx")
+    XLSX.writeFile(workBook, "Tabla.xlsx")
 
 }
 convertJsonToExcel()
