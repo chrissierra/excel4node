@@ -37,6 +37,57 @@ new Array(3).fill(
     }
 )
 
+
+
+const payload = {
+    "informacionAdicional": {
+        "nombre": "PABLO MATTE",
+        "rut": "138298086",
+        "operacion": "Inversión Extranjera/Descargar detalle excel"
+    },
+    "datos": [
+        [
+            "Money Market",
+            "-",
+            101800.73,
+            1,
+            713,
+            101800.73,
+            72537092
+        ]
+    ],
+    "cabeceras": [
+        {
+            "tipo": "string",
+            "nombre": "Instrumentos"
+        },
+        {
+            "tipo": "string",
+            "nombre": "Ticker"
+        },
+        {
+            "tipo": "number",
+            "nombre": "Cantidad"
+        },
+        {
+            "tipo": "number",
+            "nombre": "Precio en dólares"
+        },
+        {
+            "tipo": "number",
+            "nombre": "Precio en pesos"
+        },
+        {
+            "tipo": "number",
+            "nombre": "Saldo en dólares"
+        },
+        {
+            "tipo": "number",
+            "nombre": "Saldo en pesos"
+        }
+    ]
+}
+
 const hideGridLines = () => {
     let columnsDummy = new Array(30).fill('dummyData')
     columnsDummy = columnsDummy.map((value, index)=> `${index}${value}`)
@@ -61,7 +112,6 @@ const hideGridLines = () => {
 }
 
 const setAddresA1B1TypeToHeadersObject = (cabecera) => {
-    // // console.log(`setAddresA1B1TypeToHeadersObject`,cabecera)
     cabecera.forEach( (element, index) => {
         element.a1b1 = index
     });
@@ -126,22 +176,9 @@ const tableStyles = {
 }
 
 const convertJsonToExcel = () => {
-    // const worksheet2 = hideGridLines()
     const workSheet = XLSX.utils.aoa_to_sheet(userInfo, {origin: 3})
     setAddresA1B1TypeToHeadersObject(cabeceras)
-    // const workSheet2 = XLSX.utils.json_to_sheet(dto);
     const workBook = XLSX.utils.book_new();
-    for (const property in workSheet) {
-        //// // console.log('Primera pasada', workSheet[property] )
-        workSheet[property].s = { 
-            font: { name: "Trebuchet MS", sz: 11 }, 
-            fill: { fgColor: { rgb: "FFFFFF" } },
-            border: { style: 'thin', color: "FFFFFF" }
-        }
-        if(property.includes('1') && property.length == 2){          
-            workSheet[property].s = headersStyles
-        }
-    }
     XLSX.utils.sheet_add_aoa(workSheet, convertJsonData(dto), { origin: -1 });
     let metaData = {}
     let insideTable = false;
@@ -155,11 +192,9 @@ const convertJsonToExcel = () => {
            
             if(workSheet[property].t=='n'){
                 workSheet[property].t = 'n'
-                // // console.log(workSheet[property])
             }
             if(workSheet[property].z){
                 workSheet[property].t = 'd'
-                // console.log(workSheet[property])
             }
         }
         if(insideHeaders || getDtoMetaData(dto).getInitTableA1B1(property, workSheet)){
@@ -172,19 +207,13 @@ const convertJsonToExcel = () => {
             insideTable = true
             workSheet[property].s = headersStyles
         }
-        // // console.log(`Segunda ${count}`, {hoja: workSheet[property], property} )
     }
-
-
-    // console.log(`Metadata: `, {metaData, workSheet, cols: workSheet['!cols']})
     
     XLSX.utils.book_append_sheet(workBook, workSheet, "Transacciones APV Fondos Mutuos")
     // Generate buffer
     XLSX.write(workBook, { bookType: 'xlsx', type: "buffer" })
     // Binary string
     XLSX.write(workBook, { bookType: "xlsx", type: "binary" })
-
     XLSX.writeFile(workBook, "Tabla.xlsx")
-
 }
 convertJsonToExcel()
