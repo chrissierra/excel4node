@@ -1,26 +1,12 @@
 const XLSX = require('xlsx-js-style')
 
-const userInfo = [
+/* const userInfo = [
     ["Nombre Cliente","DANIELA ALEJANDRA CANDIA ZAMORANO"],
     ["Rut Cliente","160987933"],
     ["Fecha"," 28 / 11 / 2022 3:36"],
     ["Operación", "Nombre transación" ],
-]
-
-const cabeceras = [
-    {tipo: 'string', nombre: 'Tipo Transacción'},
-    {tipo: 'string', nombre: 'Número de cuota'},
-    {tipo: 'number', nombre: 'Valor cuota'},
-    {tipo: 'number', nombre: 'Saldo'},
-    {tipo: 'string', nombre: 'Nombre fondo'},
-    {tipo: 'number', nombre: 'N° Solicitud'},
-    {tipo: 'string', nombre: 'Canal de ingreso'},
-    {tipo: 'date', nombre: 'Fecha Ingreso'},
-    {tipo: 'string', nombre: 'Estado Actual'},
-    {tipo: 'date', nombre: 'Fecha Cierre'},
-]
-
-
+] */
+/* 
 const dto = 
 new Array(3).fill(
     {
@@ -35,8 +21,24 @@ new Array(3).fill(
         "Estado Actual": 'aprobado',
         "Fecha Cierre":  new Date().toLocaleDateString(),
     }
-)
+) */
 
+const buildDTO = (payload) => {
+    let datos = payload.datos
+    let cabeceras = payload.cabeceras
+    let objectResult = {};
+    let result = []
+    datos.map( (values) => {
+        cabeceras.forEach((key, i) => objectResult[key.nombre] = values[i]);
+        result.push({...objectResult})
+    } )
+    return result
+}
+
+
+const buildAditionalInfo = (payload) => {
+    return Object.entries(payload.informacionAdicional)
+}
 
 
 const payload = {
@@ -111,11 +113,6 @@ const hideGridLines = () => {
     return workSheet;
 }
 
-const setAddresA1B1TypeToHeadersObject = (cabecera) => {
-    cabecera.forEach( (element, index) => {
-        element.a1b1 = index
-    });
-}
 
 const convertJsonData = (jsonData) => {
     let result = []
@@ -176,9 +173,21 @@ const tableStyles = {
 }
 
 const convertJsonToExcel = () => {
-    const workSheet = XLSX.utils.aoa_to_sheet(userInfo, {origin: 3})
-    setAddresA1B1TypeToHeadersObject(cabeceras)
-    const workBook = XLSX.utils.book_new();
+
+    const userInfo = buildAditionalInfo(payload)
+    let dto = buildDTO(payload)
+    console.log(buildDTO(payload))
+    
+    // const workSheet = XLSX.utils.aoa_to_sheet(userInfo, {origin: 3})
+    // const workBook = XLSX.utils.book_new();
+    
+    const workBook = XLSX.readFile('Tabla.xlsx', {cellStyles: true, type: 'file', bookFiles: true})
+    const workSheet = workBook.Sheets['Transacciones APV Fondos Mutuos']
+    const workSheet2 = workBook.Sheets['Transacciones APV Fondos Mutuos']
+    // console.log(workBook)
+    console.log(workBook.Themes.raw)
+    // XLSX.utils.sheet_add_aoa(workSheet, convertJsonData(dto), { origin: -1 });
+    XLSX.utils.sheet_add_aoa(workSheet, userInfo, { origin: 6 });
     XLSX.utils.sheet_add_aoa(workSheet, convertJsonData(dto), { origin: -1 });
     let metaData = {}
     let insideTable = false;
@@ -205,15 +214,17 @@ const convertJsonToExcel = () => {
         if(metaData.addresLastHeaderColumn == property){
             insideHeaders = false
             insideTable = true
-            workSheet[property].s = headersStyles
+            workSheet[property].h = workBook.Themes.raw
         }
     }
+
     
-    XLSX.utils.book_append_sheet(workBook, workSheet, "Transacciones APV Fondos Mutuos")
+    
+    XLSX.utils.book_append_sheet(workBook, workSheet2, "aver")
     // Generate buffer
-    XLSX.write(workBook, { bookType: 'xlsx', type: "buffer" })
+    XLSX.write(workBook, { bookType: 'xlsx', type: "buffer", cellStyles: true })
     // Binary string
-    XLSX.write(workBook, { bookType: "xlsx", type: "binary" })
-    XLSX.writeFile(workBook, "Tabla.xlsx")
+    XLSX.write(workBook, { bookType: "xlsx", type: "binary" , cellStyles: true})
+    XLSX.writeFile(workBook, "Tabla2.xlsx", {cellStyles: true})
 }
 convertJsonToExcel()
